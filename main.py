@@ -4,6 +4,7 @@ from constants import openai_key
 from langchain.llms import OpenAI
 from langchain import PromptTemplate
 from langchain.chains import LLMChain
+from langchain import FewShotPromptTemplate
 
 from langchain.memory import ConversationBufferMemory
 
@@ -18,7 +19,7 @@ os.environ["OPENAI_API_KEY"]=openai_key
 llm=OpenAI(temperature=0.4)
 
 # streamlit framework
-st.title('Book Search Results')
+st.title('book Search Results')
 input_text=st.text_input("Search for a book...")
 
 # Memory
@@ -58,8 +59,60 @@ parent_chain=SequentialChain(chains=[chain,chain2,chain3],input_variables=['name
 if input_text:
     st.write(parent_chain({'name':input_text}))
 
-    with st.expander('Book Name'): 
+    with st.expander('book Name'): 
         st.info(publishing_memory.buffer)
 
     with st.expander('Major Events'): 
         st.info(descr_memory.buffer)
+
+
+# Streamlit Framework
+
+st.title('Enter Genre for the book')
+input_text1=st.text_input("It may be fantasy, fiction, horror...")
+
+template1='''Find the book of '{genre}' genre and in {language} language'''
+forth_input_prompt=PromptTemplate(
+    input_variables=["genre","language"],
+    template=template1,
+)
+
+print(forth_input_prompt.format(genre="fantasy",language="english"))
+
+chain4=LLMChain(llm=llm,prompt=forth_input_prompt)
+
+if input_text1:
+    st.write(chain4({'genre':input_text1,'language':'english'}))
+
+
+# Streamlit Framework
+st.title('Search Genre for the book')
+input_text2=st.text_input("Enter the book name...")
+
+examples=[
+    {"book":"The great gatsby","genre":"fiction"},
+    {"book":"Treasure Islands","genre":"Adventure"},
+]
+
+example_formatter_template="""book: {book} genre: {genre}"""
+
+fifth_input_prompt= PromptTemplate(
+    input_variables=["book","genre"],
+    template=example_formatter_template,
+)
+
+few_shot_prompt= FewShotPromptTemplate(
+    examples=examples,
+    example_prompt=fifth_input_prompt,
+    prefix="Give the genre of each book\n",
+    suffix="book: {input} genre: ",
+    input_variables=["input"],
+    example_separator="\n"
+)
+
+print(few_shot_prompt.format(input="Three Men in a boat"))
+
+chain5=LLMChain(llm=llm,prompt=few_shot_prompt)
+
+if input_text2:
+    st.write(chain5({'input':input_text2}))
